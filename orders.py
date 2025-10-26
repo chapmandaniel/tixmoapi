@@ -1,37 +1,14 @@
 """
-Order and OrderItem models for ticket purchases.
+Order and purchase schemas for ticket buying flow.
 """
 
-import enum
+from pydantic import BaseModel, Field, validator, EmailStr
 from datetime import datetime
-from typing import TYPE_CHECKING
-
-from sqlalchemy import (
-    CheckConstraint,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    Text,
-)
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
-import uuid as uuid_lib
-
-from src.core.database import Base
-
-if TYPE_CHECKING:
-    from src.models.users import User
-    from src.models.events import Event
-    from src.models.ticket_tiers import TicketTier
-    from src.models.tickets import Ticket
-    from src.models.payment_transactions import PaymentTransaction
+from typing import Optional
+from enum import Enum
 
 
-class OrderStatus(str, enum.Enum):
+class OrderStatus(str, Enum):
     """Order status enumeration."""
 
     PENDING = "pending"
@@ -40,7 +17,7 @@ class OrderStatus(str, enum.Enum):
     REFUNDED = "refunded"
 
 
-class PaymentStatus(str, enum.Enum):
+class PaymentStatus(str, Enum):
     """Payment status enumeration."""
 
     PENDING = "pending"
@@ -49,160 +26,330 @@ class PaymentStatus(str, enum.Enum):
     REFUNDED = "refunded"
 
 
-class Order(Base):
-    """Order model for ticket purchases."""
+class OrderItemRequest(BaseModel):
+    """Order item in purchase request."""
 
-    __tablename__ = "orders"
-
-    # Primary Key
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    uuid: Mapped[uuid_lib.UUID] = mapped_column(
-        UUID(as_uuid=True), unique=True, nullable=False, default=uuid_lib.uuid4
+    tier_id: int = Field(
+        ge=1,
+        description="Ticket tier ID"
+    )
+    quantity: int = Field(
+        ge=1,
+        le=1000,
+        description="Number of tickets to purchase"
     )
 
-    # Foreign Keys
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "tier_id": 1,
+                "quantity": 2
+            }
+        }
+
+
+class CreateOrderRequest(BaseModel):
+    """Create order request schema."""
+
+    event_id: int = Field(
+        ge=1,
+        description="Event ID"
     )
-    event_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("events.id", ondelete="RESTRICT"), nullable=False, index=True
+    items: list[OrderItemRequest] = Field(
+        min_items=1,
+        max_items=100,
+        description="Items to purchase"
     )
-
-    # Order Information
-    order_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-
-    # Status
-    status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus, native_enum=False), default=OrderStatus.PENDING, nullable=False, index=True
+    billing_email: Optional[EmailStr] = Field(
+        default=None,
+        description="Billing email (defaults to user email)"
     )
-
-    # Pricing
-    subtotal: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    service_fee: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
-    tax: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
-    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), default="USD")
-
-    # Payment Information
-    payment_status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus, native_enum=False), default=PaymentStatus.PENDING, nullable=False, index=True
-    )
-    payment_intent_id: Mapped[str | None] = mapped_column(String(255))
-    payment_method: Mapped[str | None] = mapped_column(String(50))
-
-    # Order Lifecycle
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    refunded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    refund_amount: Mapped[float | None] = mapped_column(Numeric(10, 2))
-    refund_reason: Mapped[str | None] = mapped_column(Text)
-
-    # Billing Information
-    billing_email: Mapped[str | None] = mapped_column(String(255))
-    billing_name: Mapped[str | None] = mapped_column(String(255))
-    billing_address: Mapped[dict | None] = mapped_column(JSONB)
-
-    # Metadata
-    metadata: Mapped[dict] = mapped_column(JSONB, default={})
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    billing_name: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Billing name"
     )
 
-    # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="orders")
-    event: Mapped["Event"] = relationship("Event", back_populates="orders")
-    order_items: Mapped[list["OrderItem"]] = relationship(
-        "OrderItem", back_populates="order", cascade="all, delete-orphan"
-    )
-    tickets: Mapped[list["Ticket"]] = relationship("Ticket", back_populates="order")
-    payment_transactions: Mapped[list["PaymentTransaction"]] = relationship(
-        "PaymentTransaction", back_populates="order"
-    )
-
-    # Constraints
-    __table_args__ = (
-        CheckConstraint("subtotal >= 0", name="check_subtotal"),
-        CheckConstraint("service_fee >= 0", name="check_service_fee"),
-        CheckConstraint("tax >= 0", name="check_tax"),
-        CheckConstraint("total_amount >= 0", name="check_total_amount"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Order(id={self.id}, number={self.order_number}, status={self.status})>"
-
-    @property
-    def is_pending(self) -> bool:
-        """Check if order is pending."""
-        return self.status == OrderStatus.PENDING
-
-    @property
-    def is_confirmed(self) -> bool:
-        """Check if order is confirmed."""
-        return self.status == OrderStatus.CONFIRMED
-
-    @property
-    def is_cancelled(self) -> bool:
-        """Check if order is cancelled."""
-        return self.status == OrderStatus.CANCELLED
-
-    @property
-    def is_refunded(self) -> bool:
-        """Check if order is refunded."""
-        return self.status == OrderStatus.REFUNDED
-
-    @property
-    def is_paid(self) -> bool:
-        """Check if payment is completed."""
-        return self.payment_status == PaymentStatus.COMPLETED
-
-    @property
-    def total_tickets(self) -> int:
-        """Get total number of tickets in order."""
-        return sum(item.quantity for item in self.order_items)
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "event_id": 1,
+                "items": [
+                    {"tier_id": 1, "quantity": 2},
+                    {"tier_id": 2, "quantity": 1}
+                ],
+                "billing_email": "john@example.com",
+                "billing_name": "John Doe"
+            }
+        }
 
 
-class OrderItem(Base):
-    """Order item model for line items in an order."""
+class BillingAddress(BaseModel):
+    """Billing address schema."""
 
-    __tablename__ = "order_items"
+    street: str = Field(max_length=255, description="Street address")
+    city: str = Field(max_length=100, description="City")
+    state: str = Field(max_length=100, description="State/Province")
+    postal_code: str = Field(max_length=20, description="Postal code")
+    country: str = Field(min_length=2, max_length=2, description="Country code")
 
-    # Primary Key
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    # Foreign Keys
-    order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    tier_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("ticket_tiers.id", ondelete="RESTRICT"), nullable=False, index=True
+class CreateOrderWithBillingRequest(BaseModel):
+    """Create order with full billing information."""
+
+    event_id: int = Field(ge=1, description="Event ID")
+    items: list[OrderItemRequest] = Field(min_items=1, description="Items to purchase")
+    billing_email: EmailStr = Field(description="Billing email")
+    billing_name: str = Field(max_length=255, description="Billing name")
+    billing_address: Optional[BillingAddress] = Field(
+        default=None,
+        description="Billing address"
     )
 
-    # Item Details
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    subtotal: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "event_id": 1,
+                "items": [{"tier_id": 1, "quantity": 2}],
+                "billing_email": "john@example.com",
+                "billing_name": "John Doe",
+                "billing_address": {
+                    "street": "123 Main St",
+                    "city": "New York",
+                    "state": "NY",
+                    "postal_code": "10001",
+                    "country": "US"
+                }
+            }
+        }
 
-    # Timestamp
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+
+class OrderItemResponse(BaseModel):
+    """Order item in response."""
+
+    id: int = Field(description="Order item ID")
+    tier_id: int = Field(description="Tier ID")
+    tier_name: str = Field(description="Tier name")
+    quantity: int = Field(description="Quantity")
+    unit_price: float = Field(description="Price per ticket")
+    subtotal: float = Field(description="Line item total")
+
+    class Config:
+        """Pydantic configuration."""
+        from_attributes = True
+
+
+class OrderResponse(BaseModel):
+    """Order response schema."""
+
+    id: int = Field(description="Order ID")
+    uuid: str = Field(description="Order UUID")
+    order_number: str = Field(description="Order number")
+    event_id: int = Field(description="Event ID")
+    event_title: Optional[str] = Field(default=None, description="Event title")
+    status: str = Field(description="Order status")
+    payment_status: str = Field(description="Payment status")
+    subtotal: float = Field(description="Subtotal before fees/tax")
+    service_fee: float = Field(description="Service fee")
+    tax: float = Field(description="Tax")
+    total_amount: float = Field(description="Total amount")
+    currency: str = Field(description="Currency code")
+    items: list[OrderItemResponse] = Field(description="Order items")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
+    expires_at: Optional[datetime] = Field(default=None, description="Order expiration time")
+    confirmed_at: Optional[datetime] = Field(default=None, description="Confirmation time")
+
+    class Config:
+        """Pydantic configuration."""
+        from_attributes = True
+        schema_extra = {
+            "example": {
+                "id": 1,
+                "uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "order_number": "ORD-2025-001",
+                "event_id": 1,
+                "status": "pending",
+                "payment_status": "pending",
+                "subtotal": 99.98,
+                "service_fee": 5.00,
+                "tax": 8.40,
+                "total_amount": 113.38,
+                "currency": "USD"
+            }
+        }
+
+
+class OrderDetailResponse(BaseModel):
+    """Detailed order response."""
+
+    id: int = Field(description="Order ID")
+    uuid: str = Field(description="Order UUID")
+    order_number: str = Field(description="Order number")
+    event_id: int = Field(description="Event ID")
+    event: "EventOrderInfo" = Field(description="Event details")
+    status: str = Field(description="Order status")
+    payment_status: str = Field(description="Payment status")
+    subtotal: float = Field(description="Subtotal")
+    service_fee: float = Field(description="Service fee")
+    tax: float = Field(description="Tax")
+    total_amount: float = Field(description="Total amount")
+    currency: str = Field(description="Currency")
+    items: list[OrderItemResponse] = Field(description="Order items")
+    tickets_count: int = Field(description="Total number of tickets")
+    billing_email: Optional[str] = Field(default=None, description="Billing email")
+    billing_name: Optional[str] = Field(default=None, description="Billing name")
+    payment_method: Optional[str] = Field(default=None, description="Payment method")
+    payment_intent_id: Optional[str] = Field(default=None, description="Stripe payment intent ID")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
+    expires_at: Optional[datetime] = Field(default=None, description="Order expiration")
+    confirmed_at: Optional[datetime] = Field(default=None, description="Confirmation time")
+    refunded_at: Optional[datetime] = Field(default=None, description="Refund time")
+    refund_amount: Optional[float] = Field(default=None, description="Refund amount")
+    refund_reason: Optional[str] = Field(default=None, description="Refund reason")
+
+    class Config:
+        """Pydantic configuration."""
+        from_attributes = True
+
+
+class EventOrderInfo(BaseModel):
+    """Event information in order response."""
+
+    id: int = Field(description="Event ID")
+    title: str = Field(description="Event title")
+    start_time: datetime = Field(description="Start time")
+    venue_name: str = Field(description="Venue name")
+
+    class Config:
+        """Pydantic configuration."""
+        from_attributes = True
+
+
+class ConfirmOrderRequest(BaseModel):
+    """Confirm order request (after payment)."""
+
+    payment_intent_id: str = Field(description="Stripe payment intent ID")
+    payment_method: Optional[str] = Field(
+        default=None,
+        description="Payment method used"
     )
 
-    # Relationships
-    order: Mapped["Order"] = relationship("Order", back_populates="order_items")
-    tier: Mapped["TicketTier"] = relationship("TicketTier", back_populates="order_items")
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "payment_intent_id": "pi_3Kj7L9C0Z3Q7X4W2Q7X4",
+                "payment_method": "card"
+            }
+        }
 
-    # Constraints
-    __table_args__ = (
-        CheckConstraint("quantity > 0", name="check_quantity"),
-        CheckConstraint("unit_price >= 0", name="check_unit_price"),
-        CheckConstraint("subtotal >= 0", name="check_subtotal"),
+
+class CancelOrderRequest(BaseModel):
+    """Cancel order request schema."""
+
+    reason: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Cancellation reason"
     )
 
-    def __repr__(self) -> str:
-        return f"<OrderItem(id={self.id}, quantity={self.quantity}, subtotal={self.subtotal})>"
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "reason": "I can no longer attend the event"
+            }
+        }
+
+
+class RefundOrderRequest(BaseModel):
+    """Refund order request schema."""
+
+    reason: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Refund reason"
+    )
+    refund_amount: Optional[float] = Field(
+        default=None,
+        description="Amount to refund (defaults to full amount)"
+    )
+
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "reason": "Event was cancelled",
+                "refund_amount": 113.38
+            }
+        }
+
+
+class PaymentIntentResponse(BaseModel):
+    """Stripe payment intent response."""
+
+    client_secret: str = Field(description="Stripe client secret for payment")
+    payment_intent_id: str = Field(description="Stripe payment intent ID")
+    amount: float = Field(description="Amount to charge in cents")
+    currency: str = Field(description="Currency code")
+    status: str = Field(description="Intent status")
+
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "client_secret": "pi_3Kj7L9C0Z3Q7X4W2Q7X4_secret_abc123",
+                "payment_intent_id": "pi_3Kj7L9C0Z3Q7X4W2Q7X4",
+                "amount": 11338,
+                "currency": "usd",
+                "status": "requires_payment_method"
+            }
+        }
+
+
+class OrderListResponse(BaseModel):
+    """Order list response (minimal)."""
+
+    id: int = Field(description="Order ID")
+    order_number: str = Field(description="Order number")
+    event_title: str = Field(description="Event title")
+    status: str = Field(description="Order status")
+    total_amount: float = Field(description="Total amount")
+    currency: str = Field(description="Currency")
+    tickets_count: int = Field(description="Number of tickets")
+    created_at: datetime = Field(description="Creation timestamp")
+
+    class Config:
+        """Pydantic configuration."""
+        from_attributes = True
+
+
+class CreateOrderResponse(BaseModel):
+    """Response when creating an order."""
+
+    order: OrderResponse = Field(description="Created order")
+    message: str = Field(description="Status message")
+    expires_in: int = Field(description="Order expiration time in seconds")
+
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "message": "Order created successfully. Proceed to payment.",
+                "expires_in": 900,
+                "order": {
+                    "id": 1,
+                    "order_number": "ORD-2025-001",
+                    "status": "pending"
+                }
+            }
+        }
+
+
+# Update forward references
+OrderDetailResponse.model_rebuild()

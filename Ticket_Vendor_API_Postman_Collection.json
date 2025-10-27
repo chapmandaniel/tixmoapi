@@ -1,0 +1,700 @@
+{
+  "info": {
+    "name": "Ticket Vendor API - Complete Test Suite",
+    "description": "Comprehensive collection for testing all 28 endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "event_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tier_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication (8 endpoints)",
+      "item": [
+        {
+          "name": "1. Register Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('admin_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!@#\",\n  \"full_name\": \"Admin User\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "2. Register Promoter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('promoter_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"promoter@test.com\",\n  \"password\": \"Promoter123!@#\",\n  \"full_name\": \"Test Promoter\",\n  \"role\": \"promoter\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "3. Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('user_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@test.com\",\n  \"password\": \"User123!@#\",\n  \"full_name\": \"Test User\",\n  \"role\": \"user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "4. Login Promoter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('access_token', response.access_token);",
+                  "    pm.environment.set('refresh_token', response.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"promoter@test.com\",\n  \"password\": \"Promoter123!@#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "5. Login User",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@test.com\",\n  \"password\": \"User123!@#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "6. Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "7. Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "8. Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Events (9 endpoints)",
+      "item": [
+        {
+          "name": "1. Create Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('event_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Summer Music Festival 2025\",\n  \"description\": \"The biggest music event of the summer\",\n  \"venue_name\": \"Central Park Amphitheater\",\n  \"venue_address\": \"123 Park Ave, New York, NY 10001\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"country\": \"USA\",\n  \"event_date\": \"2025-07-15T18:00:00Z\",\n  \"doors_open_time\": \"17:00:00\",\n  \"event_start_time\": \"18:00:00\",\n  \"event_end_time\": \"23:00:00\",\n  \"category\": \"music\",\n  \"tags\": [\"music\", \"festival\", \"outdoor\"],\n  \"image_url\": \"https://example.com/festival.jpg\",\n  \"total_capacity\": 5000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "2. List Events",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/events?limit=10&skip=0",
+              "host": ["{{base_url}}"],
+              "path": ["events"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "status_filter",
+                  "value": "published",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "music",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "festival",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Event Details",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "4. Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Summer Music Festival 2025 - Updated\",\n  \"description\": \"The biggest music event of the summer - Now with more stages!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "5. Get My Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/events/my/events",
+              "host": ["{{base_url}}"],
+              "path": ["events", "my", "events"]
+            }
+          }
+        },
+        {
+          "name": "6. Publish Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_featured\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}/publish",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}", "publish"]
+            }
+          }
+        },
+        {
+          "name": "7. Cancel Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancellation_reason\": \"Venue unavailable\",\n  \"refund_policy\": \"Full refund for all tickets\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "8. Complete Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}/complete",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}", "complete"]
+            }
+          }
+        },
+        {
+          "name": "9. Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/events/{{event_id}}?hard_delete=false",
+              "host": ["{{base_url}}"],
+              "path": ["events", "{{event_id}}"],
+              "query": [
+                {
+                  "key": "hard_delete",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tickets (11 endpoints)",
+      "item": [
+        {
+          "name": "1. Create Ticket Tier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('tier_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Admission\",\n  \"description\": \"Standard entry ticket\",\n  \"price\": 49.99,\n  \"quantity\": 1000,\n  \"min_purchase\": 1,\n  \"max_purchase\": 10,\n  \"sale_start_time\": \"2025-10-27T00:00:00Z\",\n  \"sale_end_time\": \"2025-07-14T23:59:59Z\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/events/{{event_id}}/tiers",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "events", "{{event_id}}", "tiers"]
+            }
+          }
+        },
+        {
+          "name": "2. List Event Tiers",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/events/{{event_id}}/tiers",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "events", "{{event_id}}", "tiers"]
+            }
+          }
+        },
+        {
+          "name": "3. Get Tier Details",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/tiers/{{tier_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "tiers", "{{tier_id}}"]
+            }
+          }
+        },
+        {
+          "name": "4. Check Tier Availability",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/tiers/{{tier_id}}/availability",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "tiers", "{{tier_id}}", "availability"]
+            }
+          }
+        },
+        {
+          "name": "5. Update Tier",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1500,\n  \"description\": \"Standard entry ticket - More tickets available!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/tiers/{{tier_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "tiers", "{{tier_id}}"]
+            }
+          }
+        },
+        {
+          "name": "6. Delete Tier",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/tiers/{{tier_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "tiers", "{{tier_id}}"]
+            }
+          }
+        },
+        {
+          "name": "7. Get My Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/my/tickets",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "my", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "8. Get Ticket Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}"]
+            }
+          }
+        },
+        {
+          "name": "9. Set Attendee Info",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attendee_name\": \"Jane Smith\",\n  \"attendee_email\": \"jane@example.com\",\n  \"attendee_phone\": \"+1234567890\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/attendee",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "attendee"]
+            }
+          }
+        },
+        {
+          "name": "10. Transfer Ticket",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient_email\": \"recipient@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/transfer",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "transfer"]
+            }
+          }
+        },
+        {
+          "name": "11. Validate Ticket",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_uuid\": \"550e8400-e29b-41d4-a716-446655440000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/validate",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "validate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
